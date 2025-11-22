@@ -1,8 +1,4 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "env": {
-    "GEMINI_API_KEY": "@GEMINI_API_KEY",
-    "SESSION_SECRET": "@SESSION_SECRET"
-  }
+  "outputDirectory": "dist"
 }
