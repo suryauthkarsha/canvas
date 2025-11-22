@@ -186,13 +186,13 @@ export default function Home() {
       const response = await fetch('/api/push-to-github', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoName: 'canvasdeck-ai' })
+        body: JSON.stringify({ repoUrl: 'https://github.com/suryauthkarsha/canvas.git' })
       });
 
       const data = await response.json();
       
       if (response.ok) {
-        alert(`Success! Repo pushed to ${data.repoUrl}`);
+        alert(`Success! Pushed to ${data.repoUrl}`);
       } else {
         alert('Error: ' + (data.error || 'Failed to push'));
       }

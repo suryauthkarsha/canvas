@@ -40,39 +40,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint for pushing to GitHub
   app.post("/api/push-to-github", async (req, res) => {
     try {
-      const { repoName = "canvasdeck-ai" } = req.body;
+      const { repoUrl = "https://github.com/suryauthkarsha/canvas.git" } = req.body;
       
       const token = await getGitHubAccessToken();
       
-      // Get current user info
-      const userResponse = await fetch('https://api.github.com/user', {
-        headers: {
-          'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
-      
-      const userData = await userResponse.json();
-      const username = userData.login;
-      
-      if (!username) {
-        return res.status(500).json({ error: 'Could not get GitHub username' });
+      // Parse GitHub URL to extract username and repo name
+      const urlMatch = repoUrl.match(/github\.com[:/]([^/]+)\/([^/]+?)(\.git)?$/);
+      if (!urlMatch) {
+        return res.status(400).json({ error: 'Invalid GitHub URL format' });
       }
       
-      // Try to create repo (if it fails with 422, it already exists)
-      await fetch(`https://api.github.com/user/repos`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `token ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: repoName,
-          description: 'AI-powered presentation generator using Gemini 2.5 Flash',
-          private: false
-        })
-      });
+      const username = urlMatch[1];
+      const repoName = urlMatch[2];
       
       // Configure git
       const { execSync } = require('child_process');
@@ -86,6 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         execSync('git push -u origin main', { stdio: 'pipe' });
       } catch (gitError) {
         console.error('Git push error:', gitError);
+        throw gitError;
       }
       
       res.json({ 
@@ -96,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
     } catch (error) {
       console.error('Error pushing to GitHub:', error);
-      res.status(500).json({ error: 'Failed to push to GitHub' });
+      res.status(500).json({ error: 'Failed to push to GitHub: ' + error.message });
     }
   });
 
