@@ -28,6 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               Generate a JSON structure for a presentation.
               CRITICAL: Check if user asked for a specific number of slides. If so, use that count. Otherwise default to 6.
+              IMPORTANT: All text content must be plain text only. Do NOT use any markdown formatting like *text*, **text**, _text_, or any other formatting symbols.
               
               DESIGN SYSTEM:
               - 'Space Grotesk' headers.
@@ -59,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ]
               }
               
-              Return ONLY valid JSON. No markdown.`
+              Return ONLY valid JSON. No markdown. All text must be plain text without any formatting symbols.`
             }]
           }]
         })
