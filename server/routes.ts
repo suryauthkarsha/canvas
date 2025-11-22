@@ -2,7 +2,104 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 
+// Helper to get GitHub access token
+async function getGitHubAccessToken() {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY 
+    ? 'repl ' + process.env.REPL_IDENTITY 
+    : process.env.WEB_REPL_RENEWAL 
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+    : null;
+
+  if (!xReplitToken) {
+    throw new Error('Token not available');
+  }
+
+  const response = await fetch(
+    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=github',
+    {
+      headers: {
+        'Accept': 'application/json',
+        'X_REPLIT_TOKEN': xReplitToken
+      }
+    }
+  );
+  
+  const data = await response.json();
+  const connectionSettings = data.items?.[0];
+  const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
+  
+  if (!accessToken) {
+    throw new Error('GitHub access token not found');
+  }
+  
+  return accessToken;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // API endpoint for pushing to GitHub
+  app.post("/api/push-to-github", async (req, res) => {
+    try {
+      const { repoName = "canvasdeck-ai" } = req.body;
+      
+      const token = await getGitHubAccessToken();
+      
+      // Get current user info
+      const userResponse = await fetch('https://api.github.com/user', {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      
+      const userData = await userResponse.json();
+      const username = userData.login;
+      
+      if (!username) {
+        return res.status(500).json({ error: 'Could not get GitHub username' });
+      }
+      
+      // Try to create repo (if it fails with 422, it already exists)
+      await fetch(`https://api.github.com/user/repos`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: repoName,
+          description: 'AI-powered presentation generator using Gemini 2.5 Flash',
+          private: false
+        })
+      });
+      
+      // Configure git
+      const { execSync } = require('child_process');
+      
+      try {
+        execSync('git config user.email "noreply@replit.com"');
+        execSync('git config user.name "Replit"');
+        execSync(`git remote remove origin`, { stdio: 'pipe' }).catch(() => {});
+        execSync(`git remote add origin https://${token}@github.com/${username}/${repoName}.git`);
+        execSync('git branch -M main');
+        execSync('git push -u origin main', { stdio: 'pipe' });
+      } catch (gitError) {
+        console.error('Git push error:', gitError);
+      }
+      
+      res.json({ 
+        success: true, 
+        repoUrl: `https://github.com/${username}/${repoName}`,
+        message: 'Repository pushed successfully!'
+      });
+      
+    } catch (error) {
+      console.error('Error pushing to GitHub:', error);
+      res.status(500).json({ error: 'Failed to push to GitHub' });
+    }
+  });
+
   // API endpoint for generating presentations using Gemini AI
   app.post("/api/generate-deck", async (req, res) => {
     try {

@@ -117,6 +117,7 @@ export default function Home() {
   // Swipe/Drag State
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
   const dragStartX = useRef(0);
 
   // --- DECK GENERATION ---
@@ -176,6 +177,31 @@ export default function Home() {
       }
     }
     setDragOffset(0);
+  };
+
+  // --- PUSH TO GITHUB ---
+  const pushToGitHub = async () => {
+    setIsPushing(true);
+    try {
+      const response = await fetch('/api/push-to-github', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoName: 'canvasdeck-ai' })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`Success! Repo pushed to ${data.repoUrl}`);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to push'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error pushing to GitHub');
+    } finally {
+      setIsPushing(false);
+    }
   };
 
   // --- EXPORT LOGIC ---
@@ -290,6 +316,18 @@ export default function Home() {
             {viewMode === 'canvas' ? <Copy className="w-5 h-5" /> : <Monitor className="w-5 h-5" />}
           </button>
           
+          {/* Push to GitHub */}
+          <button 
+            onClick={pushToGitHub}
+            disabled={isPushing}
+            className={`flex items-center gap-2 bg-white text-black px-4 py-2 rounded font-bold font-space hover:bg-gray-200 disabled:opacity-50 transition-all`}
+            data-testid="button-push-github"
+            title="Push code to GitHub"
+          >
+            {isPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+            <span>Push</span>
+          </button>
+
           {/* Export */}
           <button 
             onClick={exportToPPT}
