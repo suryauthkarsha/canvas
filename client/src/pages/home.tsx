@@ -183,79 +183,82 @@ export default function Home() {
     if (!deck) return;
     setExporting(true);
     
-    const pres = new PptxGenJS();
-    pres.layout = 'LAYOUT_16x9';
-    
-    const t = THEMES[activeTheme];
-    const bgHex = t.pptBg;
-    const textHex = t.pptText;
-    const subTextHex = t.pptSub;
-    const accentHex = t.accentHex;
+    try {
+      const pres = new PptxGenJS();
+      pres.layout = 'LAYOUT_16x9';
+      
+      const t = THEMES[activeTheme];
+      const bgHex = t.pptBg;
+      const textHex = t.pptText;
+      const subTextHex = t.pptSub;
+      const accentHex = t.accentHex;
 
-    deck.slides.forEach(slide => {
-      const s = pres.addSlide();
-      s.background = { color: bgHex };
-      const imgUrl = getImageUrl(slide.imagePrompt);
+      deck.slides.forEach(slide => {
+        const s = pres.addSlide();
+        s.background = { color: bgHex };
 
-      if (slide.layout === 'title-cyber') {
-        if (imgUrl) s.addImage({ path: imgUrl, x: 0, y: 0, w: '100%', h: '100%', transparency: 60 });
-        s.addShape(pres.ShapeType.rect, { x: 1, y: 2.3, w: 2, h: 0.05, fill: { color: accentHex } });
-        s.addText(slide.title, { x: 1, y: 2.5, w: 8, h: 1.5, fontSize: 48, bold: true, color: textHex, valign: 'top' });
-        s.addText(slide.subtitle || '', { x: 1, y: 4, w: 8, h: 1, fontSize: 18, color: subTextHex, valign: 'top' });
-      }
-      else if (slide.layout === 'split-bleed') {
-        s.addText(slide.title, { x: 0.5, y: 0.5, w: 4, h: 1, fontSize: 28, bold: true, color: textHex });
-        s.addText(slide.content?.map(c => ({ text: c, options: { breakLine: true } })) || [], { x: 0.5, y: 1.8, w: 4, h: 3.5, fontSize: 14, color: subTextHex, bullet: { code: '2022' }, valign: 'top' });
-        if (imgUrl) s.addImage({ path: imgUrl, x: 5, y: 0, w: 5, h: 5.625 });
-        else s.addShape(pres.ShapeType.rect, { x: 5, y: 0, w: 5, h: 5.625, fill: { color: '333333' } });
-      }
-      else if (slide.layout === 'timeline-horizontal') {
-        s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
-        s.addShape(pres.ShapeType.line, { x: 1, y: 3, w: 8, h: 0, line: { color: subTextHex, width: 2 } });
-        slide.timeline?.forEach((item, i) => {
-          const xPos = 1.5 + (i * 2.2);
-          s.addShape(pres.ShapeType.ellipse, { x: xPos, y: 2.85, w: 0.3, h: 0.3, fill: { color: bgHex }, line: { color: accentHex, width: 3 } });
-          s.addText(item.year, { x: xPos - 0.5, y: 2.3, w: 1.3, h: 0.4, align: 'center', fontSize: 16, bold: true, color: accentHex });
-          s.addText(item.title, { x: xPos - 0.8, y: 3.3, w: 1.9, h: 0.5, align: 'center', fontSize: 12, bold: true, color: textHex });
-          s.addText(item.desc, { x: xPos - 0.8, y: 3.8, w: 1.9, h: 0.8, align: 'center', fontSize: 10, color: subTextHex });
-        });
-      }
-      else if (slide.layout === 'bento-grid') {
-        s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
-        slide.blocks?.forEach((block, i) => {
-          const col = i % 2;
-          const row = Math.floor(i / 2);
-          const x = col === 0 ? 0.5 : 5.25;
-          const y = row === 0 ? 1.5 : 3.6;
-          const cardFill = activeTheme === 'executive' ? 'F1F5F9' : '151515';
-          const cardLine = activeTheme === 'executive' ? 'CBD5E1' : '333333';
-          s.addShape(pres.ShapeType.roundRect, { x: x, y: y, w: 4.25, h: 1.8, fill: { color: cardFill }, line: { color: cardLine } });
-          s.addShape(pres.ShapeType.ellipse, { x: x+0.2, y: y+0.2, w: 0.5, h: 0.5, fill: { color: accentHex } });
-          s.addText(block.title, { x: x+0.2, y: y+0.8, w: 3.8, h: 0.4, fontSize: 14, bold: true, color: textHex });
-          s.addText(block.content, { x: x+0.2, y: y+1.1, w: 3.8, h: 0.6, fontSize: 11, color: subTextHex, valign: 'top' });
-        });
-      }
-      else if (slide.layout === 'big-stat') {
-        s.addText(slide.stat?.value || '', { x: 0.5, y: 1.5, w: 5, h: 2.5, fontSize: 120, color: accentHex, bold: true, align: 'center' });
-        s.addShape(pres.ShapeType.line, { x: 5.5, y: 2, w: 0, h: 2, line: { color: accentHex, width: 3 } });
-        s.addText(slide.title, { x: 6, y: 2, w: 3.5, h: 1, fontSize: 24, bold: true, color: textHex, valign: 'bottom' });
-        s.addText(slide.subtitle || slide.content?.[0] || '', { x: 6, y: 3, w: 3.5, h: 1.5, fontSize: 14, color: subTextHex, valign: 'top' });
-      }
-      else if (slide.layout === 'chart-bar') {
-        s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
-        if (slide.chart) {
-          const chartData = [{ name: slide.chart.label || "Series 1", labels: slide.chart.labels, values: slide.chart.values }];
-          s.addChart('bar' as any, chartData, { x: 0.5, y: 1.5, w: 9, h: 3.5, chartColors: [...t.chartColors] as any, barDir: 'bar', barGrouping: 'standard', dataLabelPosition: 'outEnd', showValue: true });
+        if (slide.layout === 'title-cyber') {
+          s.addShape(pres.ShapeType.rect, { x: 1, y: 2.3, w: 2, h: 0.05, fill: { color: accentHex } });
+          s.addText(slide.title, { x: 1, y: 2.5, w: 8, h: 1.5, fontSize: 48, bold: true, color: textHex, valign: 'top' });
+          s.addText(slide.subtitle || '', { x: 1, y: 4, w: 8, h: 1, fontSize: 18, color: subTextHex, valign: 'top' });
         }
-      }
-      else {
-        s.addText(slide.title, { x: 0.5, y: 0.5, w: 9, fontSize: 24, bold: true, color: textHex });
-        s.addText(slide.content?.join('\n') || '', { x: 0.5, y: 1.5, w: 9, fontSize: 14, color: subTextHex });
-      }
-    });
-    
-    pres.writeFile({ fileName: `CanvasDeck_${t.label}.pptx` });
-    setExporting(false);
+        else if (slide.layout === 'split-bleed') {
+          s.addText(slide.title, { x: 0.5, y: 0.5, w: 4, h: 1, fontSize: 28, bold: true, color: textHex });
+          s.addText(slide.content?.map(c => ({ text: c, options: { breakLine: true } })) || [], { x: 0.5, y: 1.8, w: 4, h: 3.5, fontSize: 14, color: subTextHex, bullet: { code: '2022' }, valign: 'top' });
+          s.addShape(pres.ShapeType.rect, { x: 5, y: 0, w: 5, h: 5.625, fill: { color: '333333' } });
+        }
+        else if (slide.layout === 'timeline-horizontal') {
+          s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
+          s.addShape(pres.ShapeType.line, { x: 1, y: 3, w: 8, h: 0, line: { color: subTextHex, width: 2 } });
+          slide.timeline?.forEach((item, i) => {
+            const xPos = 1.5 + (i * 2.2);
+            s.addShape(pres.ShapeType.ellipse, { x: xPos, y: 2.85, w: 0.3, h: 0.3, fill: { color: bgHex }, line: { color: accentHex, width: 3 } });
+            s.addText(item.year, { x: xPos - 0.5, y: 2.3, w: 1.3, h: 0.4, align: 'center', fontSize: 16, bold: true, color: accentHex });
+            s.addText(item.title, { x: xPos - 0.8, y: 3.3, w: 1.9, h: 0.5, align: 'center', fontSize: 12, bold: true, color: textHex });
+            s.addText(item.desc, { x: xPos - 0.8, y: 3.8, w: 1.9, h: 0.8, align: 'center', fontSize: 10, color: subTextHex });
+          });
+        }
+        else if (slide.layout === 'bento-grid') {
+          s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
+          slide.blocks?.forEach((block, i) => {
+            const col = i % 2;
+            const row = Math.floor(i / 2);
+            const x = col === 0 ? 0.5 : 5.25;
+            const y = row === 0 ? 1.5 : 3.6;
+            const cardFill = activeTheme === 'executive' ? 'F1F5F9' : '151515';
+            const cardLine = activeTheme === 'executive' ? 'CBD5E1' : '333333';
+            s.addShape(pres.ShapeType.roundRect, { x: x, y: y, w: 4.25, h: 1.8, fill: { color: cardFill }, line: { color: cardLine } });
+            s.addShape(pres.ShapeType.ellipse, { x: x+0.2, y: y+0.2, w: 0.5, h: 0.5, fill: { color: accentHex } });
+            s.addText(block.title, { x: x+0.2, y: y+0.8, w: 3.8, h: 0.4, fontSize: 14, bold: true, color: textHex });
+            s.addText(block.content, { x: x+0.2, y: y+1.1, w: 3.8, h: 0.6, fontSize: 11, color: subTextHex, valign: 'top' });
+          });
+        }
+        else if (slide.layout === 'big-stat') {
+          s.addText(slide.stat?.value || '', { x: 0.5, y: 1.5, w: 5, h: 2.5, fontSize: 120, color: accentHex, bold: true, align: 'center' });
+          s.addShape(pres.ShapeType.line, { x: 5.5, y: 2, w: 0, h: 2, line: { color: accentHex, width: 3 } });
+          s.addText(slide.title, { x: 6, y: 2, w: 3.5, h: 1, fontSize: 24, bold: true, color: textHex, valign: 'bottom' });
+          s.addText(slide.subtitle || slide.content?.[0] || '', { x: 6, y: 3, w: 3.5, h: 1.5, fontSize: 14, color: subTextHex, valign: 'top' });
+        }
+        else if (slide.layout === 'chart-bar') {
+          s.addText(slide.title, { x: 0.5, y: 0.4, w: 9, h: 0.8, fontSize: 28, bold: true, color: textHex });
+          if (slide.chart) {
+            const chartData = [{ name: slide.chart.label || "Series 1", labels: slide.chart.labels, values: slide.chart.values }];
+            s.addChart('bar' as any, chartData, { x: 0.5, y: 1.5, w: 9, h: 3.5, chartColors: [...t.chartColors] as any, barDir: 'bar', barGrouping: 'standard', dataLabelPosition: 'outEnd', showValue: true });
+          }
+        }
+        else {
+          s.addText(slide.title, { x: 0.5, y: 0.5, w: 9, fontSize: 24, bold: true, color: textHex });
+          s.addText(slide.content?.join('\n') || '', { x: 0.5, y: 1.5, w: 9, fontSize: 14, color: subTextHex });
+        }
+      });
+      
+      pres.writeFile({ fileName: `CanvasDeck_${t.label}.pptx` });
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting PPT. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
